@@ -1,8 +1,10 @@
 import {Context, Schema, h, Universal, Time, isNullable, Random, Session} from 'koishi';
 import {getMaxAge} from './utils';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import pkg from '../package.json';
 import {} from '@koishijs/cache';
 import {Jimp} from 'jimp';
-import * as fs from "node:fs";
 
 export const name = 'waifu-bangdream'
 export const inject = {
@@ -133,21 +135,42 @@ export function apply(ctx: Context, cfg: Config) {
     return [name, await drawBanGDream(gid, id, avatar)]
   }
 
-  function initAssets(){
-    const fromUrl = `${__dirname}/../assets`;
-    assetUrl = `${ctx.baseDir}/data/waifu/assets`;
-    if (!fs.existsSync(fromUrl)) return;
-    if (!fs.readdirSync(fromUrl)?.length) return;
-    if (!fs.existsSync(assetUrl)) {
-      fs.mkdirSync(assetUrl, { recursive: true });
+  function initAssets() {
+    const assetDir = path.join(ctx.baseDir, 'data/waifu/assets');
+    if (!fs.existsSync(assetDir)) fs.mkdirSync(assetDir, { recursive: true });
+
+    const defaultAssetsDir = path.join(__dirname, '../assets');
+    const localVersionFile = path.join(assetDir, 'plugin_version.json');
+
+    // 获取当前插件 package.json 版本
+    const pluginVersion = pkg.version;
+
+    // 读取实例目录保存的版本
+    let localVersion = '0';
+    if (fs.existsSync(localVersionFile)) {
+      try {
+        localVersion = JSON.parse(fs.readFileSync(localVersionFile, 'utf-8')).version || '0';
+      } catch {
+        localVersion = '0';
+      }
     }
 
-    fs.cpSync(fromUrl, assetUrl, { recursive: true, force: true });
-    if (process.env.NODE_ENV !== "development"){
-      fs.rmSync(fromUrl, { recursive: true });
+    // 如果插件版本比本地版本新，就覆盖资产文件
+    if (pluginVersion > localVersion) {
+      if (fs.existsSync(defaultAssetsDir)) {
+        fs.readdirSync(defaultAssetsDir).forEach(file => {
+          const src = path.join(defaultAssetsDir, file);
+          const dest = path.join(assetDir, file);
+          fs.copyFileSync(src, dest);
+        });
+      }
+      // 更新本地版本记录
+      fs.writeFileSync(localVersionFile, JSON.stringify({ version: pluginVersion }));
     }
 
+    assetUrl = assetDir;
   }
+
 
   ctx.command('waifu')
     .alias('marry', '娶群友', '今日老婆')
