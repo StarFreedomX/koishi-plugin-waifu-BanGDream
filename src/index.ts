@@ -41,7 +41,7 @@ export interface marriageImage {
 }
 
 
-let assetUrl;
+export let assetUrl: string;
 
 export interface Config {
   avoidNtr: boolean,
@@ -136,11 +136,12 @@ export function apply(ctx: Context, cfg: Config) {
   }
 
   function initAssets() {
-    const assetDir = path.join(ctx.baseDir, 'data/waifu/assets');
-    if (!fs.existsSync(assetDir)) fs.mkdirSync(assetDir, { recursive: true });
+    // 目标目录
+    assetUrl = path.join(ctx.baseDir, 'data/waifu/assets');
+    if (!fs.existsSync(assetUrl)) fs.mkdirSync(assetUrl, { recursive: true });
 
     const defaultAssetsDir = path.join(__dirname, '../assets');
-    const localVersionFile = path.join(assetDir, 'plugin_version.json');
+    const localVersionFile = path.join(assetUrl, 'plugin_version.json');
 
     // 获取当前插件 package.json 版本
     const pluginVersion = pkg.version;
@@ -150,26 +151,23 @@ export function apply(ctx: Context, cfg: Config) {
     if (fs.existsSync(localVersionFile)) {
       try {
         localVersion = JSON.parse(fs.readFileSync(localVersionFile, 'utf-8')).version || '0';
-      } catch {
-        localVersion = '0';
-      }
+      } catch {}
     }
 
     // 如果插件版本比本地版本新，就覆盖资产文件
     if (pluginVersion > localVersion) {
-      if (fs.existsSync(defaultAssetsDir)) {
-        fs.readdirSync(defaultAssetsDir).forEach(file => {
-          const src = path.join(defaultAssetsDir, file);
-          const dest = path.join(assetDir, file);
-          fs.copyFileSync(src, dest);
-        });
+      try {
+        if (fs.existsSync(defaultAssetsDir)) {
+          fs.cpSync(defaultAssetsDir, assetUrl, { recursive: true, force: true });
+        }
+        // 更新本地版本记录
+        fs.writeFileSync(localVersionFile, JSON.stringify({ version: pluginVersion }));
+      } catch (err) {
+        console.error('initAssets copy failed:', err);
       }
-      // 更新本地版本记录
-      fs.writeFileSync(localVersionFile, JSON.stringify({ version: pluginVersion }));
     }
-
-    assetUrl = assetDir;
   }
+
 
 
   ctx.command('waifu')
