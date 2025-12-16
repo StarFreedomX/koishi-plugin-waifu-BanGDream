@@ -1,10 +1,10 @@
-import {Context, Schema, h, Universal, Time, isNullable, Random, Session} from 'koishi';
-import {getMaxAge} from './utils';
+import { Context, Schema, h, Universal, Time, isNullable, Random, Session } from 'koishi';
+import { getMaxAge } from './utils';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import pkg from '../package.json';
 import {} from '@koishijs/cache';
-import {Jimp} from 'jimp';
+import { Jimp } from 'jimp';
 
 export const name = 'waifu-bangdream'
 export const inject = {
